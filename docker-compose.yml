@@ -1,0 +1,36 @@
+version: '3.7'
+
+services:
+  storage:
+    container_name: storage
+    image: postgres:12-alpine
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: minibank
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 12345
+    volumes:
+      - ~/volumes/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d minibank -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    container_name: app
+    build:
+      context: .
+      dockerfile: ./build/Minibank.Dockerfile
+    depends_on:
+      storage:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    environment:
+      ConnectionStrings__MinibankDb: Host=storage;Port=5432;Database=minibank;Username=postgres;Password=12345
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5000;http://+:5001
